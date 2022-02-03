@@ -1,9 +1,16 @@
 import React from "react";
 
-const CanvasScreen = () => {
+const CanvasScreen = ({ handleMouseDown, handleMouseMove, handleMouseUp }) => {
   return (
     <div>
-      <h1>CanvasScreen</h1>
+      <canvas
+        id="canvas"
+        width={window.innerWidth}
+        height={window.innerHeight}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+      ></canvas>
     </div>
   );
 };
