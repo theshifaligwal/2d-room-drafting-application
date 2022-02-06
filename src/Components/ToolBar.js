@@ -1,14 +1,14 @@
 import React from "react";
 
-const ToolBar = ({ setElementType, elementType }) => {
+const ToolBar = ({ setTool, tool }) => {
   // handel onClick
   const handelOnClick = (event) => {
     event.preventDefault();
-    setElementType(event.target.innerHTML);
+    setTool(event.target.innerHTML);
   };
 
   const handleActiveCss = (value) => {
-    return elementType === value ? "active" : "";
+    return tool === value ? "active" : "";
   };
 
   // On Download
@@ -32,6 +32,9 @@ const ToolBar = ({ setElementType, elementType }) => {
         </li>
         <li onClick={handelOnClick} className={handleActiveCss("Chair")}>
           Chair
+        </li>
+        <li onClick={handelOnClick} className={handleActiveCss("Selection")}>
+          Selection
         </li>
       </ul>
       <a id="download" download="canvas.png">

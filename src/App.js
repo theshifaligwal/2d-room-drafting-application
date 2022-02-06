@@ -19,10 +19,28 @@ import {
 // Rough JS
 import rough from "roughjs/bundled/rough.esm";
 
+const isWithinElement = (x, y, element) => {
+  const { elementType, x1, x2, y1, y2 } = element;
+  if (elementType === "Floor" || elementType === "Cubicle") {
+    const minX = Math.min(x1, x2);
+    const maxX = Math.max(x1, x2);
+    const minY = Math.min(y1, y2);
+    const maxY = Math.max(y1, y2);
+    return x >= minX && x <= maxX && y >= minY && y <= maxY;
+  } else {
+    //
+  }
+};
+
+const getElementAtPosition = (x, y, elements) => {
+  return elements.find((element) => isWithinElement(x, y, element));
+};
+
 function App() {
   const [elements, setElements] = useState([]);
-  const [drawing, setDrawing] = useState(false);
-  const [elementType, setElementType] = useState("Floor");
+  const [action, setAction] = useState("none");
+  const [tool, setTool] = useState("Floor");
+  const [selectedElement, setSelectedElement] = useState(null);
 
   useLayoutEffect(() => {
     const canvas = document.getElementById("canvas");
@@ -30,7 +48,7 @@ function App() {
     context.clearRect(0, 0, canvas.width, canvas.height);
 
     const roughCanvas = rough.canvas(canvas);
-    if (!drawing)
+    if (!action)
       elements.forEach(({ roughElement }) => roughCanvas.draw(roughElement));
     else {
       if (elements.length > 1) {
@@ -45,20 +63,20 @@ function App() {
           context.getImageData(x2, y2, 1, 1).data
         );
         // Check For Cubicle
-        if (elementType === "Cubicle" && !checkCubicleColor(hexCodeColor)) {
+        if (tool === "Cubicle" && !checkCubicleColor(hexCodeColor)) {
           let copyElement = [...elements];
           copyElement.pop();
           setElements(copyElement);
-          setDrawing(false);
-          alert(`You can not make ${elementType}`);
+          setAction("none");
+          alert(`You can not make ${tool}`);
         }
         // Check For Chairs
-        if (elementType === "Chair" && !checkChairColor(hexCodeColor)) {
+        if (tool === "Chair" && !checkChairColor(hexCodeColor)) {
           let copyElement = [...elements];
           copyElement.pop();
           setElements(copyElement);
-          setDrawing(false);
-          alert(`You can not make ${elementType}`);
+          setAction("none");
+          alert(`You can not make ${tool}`);
         }
         roughCanvas.draw(elements[index].roughElement);
       }
@@ -66,37 +84,81 @@ function App() {
   }, [elements]);
 
   const handleMouseDown = (event) => {
-    setDrawing(true);
     const { clientX, clientY } = event;
-    const elements = createElement(
-      clientX,
-      clientY,
-      clientX,
-      clientY,
-      elementType
-    );
-    setElements((prevState) => [...prevState, elements]);
+    if (tool === "Selection") {
+      // If we are moving the select actions to moving
+      const element = getElementAtPosition(clientX, clientY, elements);
+      if (!!element) {
+        const offsetX = clientX - element.x1;
+        const offsetY = clientY - element.y1;
+        setSelectedElement({ ...element, offsetX, offsetY });
+        setAction("moving");
+      }
+    } else {
+      const id = !!elements ? elements.length : 0;
+      const element = createElement(
+        id,
+        clientX,
+        clientY,
+        clientX,
+        clientY,
+        tool
+      );
+      setElements((prevState) => [...prevState, element]);
+      setAction("drawing");
+    }
   };
 
-  const handleMouseMove = (event) => {
-    if (!drawing) return;
-
-    const { clientX, clientY } = event;
-    const index = elements.length - 1;
-    const { x1, y1 } = elements[index];
-    const updatedElement = createElement(x1, y1, clientX, clientY, elementType);
+  const updateElement = (id, x1, y1, x2, y2, elementType) => {
+    const updatedElement = createElement(id, x1, y1, x2, y2, elementType);
 
     const elementCopy = [...elements];
-    elementCopy[index] = updatedElement;
+    elementCopy[id] = updatedElement;
     setElements(elementCopy);
   };
 
+  const handleMouseMove = (event) => {
+    const { clientX, clientY } = event;
+
+    if (tool === "Selection") {
+      event.target.style.cursor = getElementAtPosition(
+        clientX,
+        clientY,
+        elements
+      )
+        ? "move"
+        : "default";
+    }
+
+    if (action === "drawing") {
+      const index = elements.length - 1;
+      const { x1, y1 } = elements[index];
+      updateElement(index, x1, y1, clientX, clientY, tool);
+    } else if (action === "moving") {
+      const { id, x1, y1, x2, y2, elementType, offsetX, offsetY } =
+        selectedElement;
+      const width = x2 - x1;
+      const height = y2 - y1;
+      const newX1 = clientX - offsetX;
+      const newY1 = clientY - offsetY;
+      updateElement(
+        id,
+        newX1,
+        newY1,
+        newX1 + width,
+        newY1 + height,
+        elementType
+      );
+    }
+  };
+
   const handleMouseUp = () => {
-    setDrawing(false);
+    setAction("none");
+    setSelectedElement(null);
   };
   return (
     <div className="appContainer">
-      <ToolBar elementType={elementType} setElementType={setElementType} />
+      <ToolBar tool={tool} setTool={setTool} />
       <CanvasScreen
         handleMouseDown={handleMouseDown}
         handleMouseMove={handleMouseMove}
