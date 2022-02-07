@@ -35,18 +35,55 @@ export const diameter = (x1, y1, x2, y2) =>
   distance(point(x1, y1), point(x2, y2)) * 2;
 
 // Create the rough element
-export const createElement = (id, x1, y1, x2, y2, type) => {
+export const createElement = (id, x1, y1, x2, y2, type, textInputName) => {
   const elementStyle = {
     roughness: 0,
     fill: colorDecider(type),
     fillStyle: "solid", // solid fill
     strokeLineDash: 0,
   };
-  const roughElement =
-    type === "Chair"
-      ? generator.circle(x1, y1, diameter(x1, y1, x2, y2), elementStyle)
-      : generator.rectangle(x1, y1, x2 - x1, y2 - y1, elementStyle);
-  return { id, x1, y1, x2, y2, type, roughElement };
+  let roughElement;
+  switch (type) {
+    case "Chair":
+      roughElement = generator.circle(
+        x1,
+        y1,
+        diameter(x1, y1, x2, y2),
+        elementStyle
+      );
+      return { id, x1, y1, x2, y2, type, roughElement };
+    case "Cubicle":
+    case "Floor":
+      roughElement = generator.rectangle(
+        x1,
+        y1,
+        x2 - x1,
+        y2 - y1,
+        elementStyle
+      );
+      return { id, x1, y1, x2, y2, type, roughElement };
+    case "Text":
+      return { id, type, x1, y1, x2, y2, textInputName };
+    default:
+      break;
+  }
+};
+
+export const drawElement = (roughCanvas, context, element) => {
+  switch (element.type) {
+    case "Floor":
+    case "Cubicle":
+    case "Chair":
+      roughCanvas.draw(element.roughElement);
+      break;
+    case "Text":
+      context.textBaseline = "top";
+      context.font = "24px sans-serif";
+      context.fillText(element.textInputName, element.x1, element.y1);
+      break;
+    default:
+      throw new Error(`Type not recognized: ${element.type}`);
+  }
 };
 
 // Find the near Points
@@ -199,6 +236,7 @@ export const removeOverlappingElements = (elements) => {
   const floor = elements.filter((floor) => floor.type === "Floor");
   const cubicle = elements.filter((floor) => floor.type === "Cubicle");
   const chair = elements.filter((floor) => floor.type === "Chair");
+  const text = elements.filter((floor) => floor.type === "Text");
   let newElementData = floor;
   let newCubicle = [];
   let removedElements = [];
@@ -246,6 +284,10 @@ export const removeOverlappingElements = (elements) => {
       }
     });
   });
+
+  // Adding Text in the state
+  newElementData = newElementData.concat(text);
+
   return { newElementData, removedElements };
 };
 

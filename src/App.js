@@ -19,6 +19,7 @@ import {
   adjustElementCoordinates,
   createElement,
   cursorForPosition,
+  drawElement,
   getElementAtPosition,
   removeOverlappingElements,
   resizedCoordinates,
@@ -31,6 +32,7 @@ function App() {
   const [tool, setTool] = useState("Floor");
   const [selectedElement, setSelectedElement] = useState(null);
   const [isRefactoringData, setIsRefactoringData] = useState(false);
+  const [textInputName, setTextInputName] = useState("");
 
   useLayoutEffect(() => {
     const canvas = document.getElementById("canvas");
@@ -38,6 +40,17 @@ function App() {
     context.clearRect(0, 0, canvas.width, canvas.height);
 
     const roughCanvas = rough.canvas(canvas);
+
+    // Create Text on Canvas
+    // elements
+    //   .filter((item) => item.type === "Text")
+    //   .map((textElement) => {
+    //     const { id, textInputName, x1, y1 } = textElement;
+    //     const roughElement = context.fillText(textInputName, x1, y1);
+    //     const elementsCopy = [...elements];
+    //     elementsCopy[id] = { ...textElement, roughElement };
+    //     setElements(elementsCopy);
+    //   });
 
     if (
       elements.length > 0 &&
@@ -53,18 +66,22 @@ function App() {
       // removedElements.map((element) => toastifyErrorMessage(element.type));
 
       // Rendering Elements
-      elements.forEach(({ roughElement }) => roughCanvas.draw(roughElement));
+      elements.forEach((element) => {
+        drawElement(roughCanvas, context, element);
+      });
       setIsRefactoringData(true);
     } else {
       // Rendering Elements
-      elements.forEach(({ roughElement }) => roughCanvas.draw(roughElement));
+      elements.forEach((element) => {
+        drawElement(roughCanvas, context, element);
+      });
       setIsRefactoringData(false);
     }
   }, [elements]);
 
   // Updating Element
   const updateElement = (id, x1, y1, x2, y2, type) => {
-    const updatedElement = createElement(id, x1, y1, x2, y2, type);
+    const updatedElement = createElement(id, x1, y1, x2, y2, type, "");
     const elementsCopy = [...elements];
     elementsCopy[id] = updatedElement;
     setElements(elementsCopy);
@@ -88,14 +105,18 @@ function App() {
       }
     } else {
       const id = elements.length;
-      const element = createElement(
-        id,
-        clientX,
-        clientY,
-        clientX,
-        clientY,
-        tool
-      );
+      const element =
+        tool === "Text"
+          ? createElement(
+              id,
+              clientX,
+              clientY,
+              clientX,
+              clientY,
+              tool,
+              textInputName
+            )
+          : createElement(id, clientX, clientY, clientX, clientY, tool, "");
       setElements((prevState) => [...prevState, element]);
       setSelectedElement(element);
 
@@ -114,18 +135,18 @@ function App() {
         : "default";
     }
 
-    if (action === "drawing") {
+    if (action === "drawing" && tool !== "Text") {
       const index = elements.length - 1;
       const { x1, y1 } = elements[index];
       updateElement(index, x1, y1, clientX, clientY, tool);
-    } else if (action === "moving") {
+    } else if (action === "moving" && tool !== "Text") {
       const { id, x1, x2, y1, y2, type, offsetX, offsetY } = selectedElement;
       const width = x2 - x1;
       const height = y2 - y1;
       const newX1 = clientX - offsetX;
       const newY1 = clientY - offsetY;
       updateElement(id, newX1, newY1, newX1 + width, newY1 + height, type);
-    } else if (action === "resizing") {
+    } else if (action === "resizing" && tool !== "Text") {
       const { id, type, position, ...coordinates } = selectedElement;
       const { x1, y1, x2, y2 } = resizedCoordinates(
         clientX,
@@ -139,7 +160,7 @@ function App() {
 
   // Handel Mouse Up Event
   const handleMouseUp = () => {
-    if (selectedElement) {
+    if (!!selectedElement && tool !== "Text") {
       const index = selectedElement.id;
       const { id, type } = elements[index];
       if (action === "drawing" || action === "resizing") {
@@ -152,7 +173,12 @@ function App() {
   };
   return (
     <div className="appContainer">
-      <ToolBar tool={tool} setTool={setTool} />
+      <ToolBar
+        tool={tool}
+        setTool={setTool}
+        textInputName={textInputName}
+        setTextInputName={setTextInputName}
+      />
       <CanvasScreen
         handleMouseDown={handleMouseDown}
         handleMouseMove={handleMouseMove}

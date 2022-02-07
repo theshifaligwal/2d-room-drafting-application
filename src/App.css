@@ -31,6 +31,12 @@
   cursor: pointer;
   font-weight: 500;
 }
+.toolbarContainer ul li input {
+  padding: 0.5rem 1rem;
+  border: 1px solid #b33030;
+  border-radius: 5px;
+  background-color: #FBF8F1;
+}
 
 .toolbarContainer .active {
   color: white;
