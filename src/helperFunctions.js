@@ -179,3 +179,69 @@ export const resizedCoordinates = (clientX, clientY, position, coordinates) => {
       return null; //should not really get here...
   }
 };
+
+// Check if the inside element is inside the parameter of
+// the outside element.
+export const isInside = (insideElement, outsideElement) => {
+  return (
+    insideElement.x1 >= outsideElement.x1 &&
+    insideElement.y1 >= outsideElement.y1 &&
+    insideElement.x2 <= outsideElement.x2 &&
+    insideElement.y2 <= outsideElement.y2
+  );
+};
+
+// Removing all the overlapping elements
+export const removeOverlappingElements = (elements) => {
+  const floor = elements.filter((floor) => floor.type === "Floor");
+  const cubicle = elements.filter((floor) => floor.type === "Cubicle");
+  const chair = elements.filter((floor) => floor.type === "Chair");
+  let newElementData = floor;
+  let newCubicle = [];
+  let errorElements = [];
+
+  // Remove all the cubicles if they are overlapping
+  cubicle.map((insideCubicleElement, index) => {
+    const isCubicleInsideCubicle = cubicle.find(
+      (outsideCubicleElement, insideIndex) => {
+        if (
+          insideIndex !== index &&
+          isInside(insideCubicleElement, outsideCubicleElement)
+        ) {
+          return true;
+        }
+      }
+    );
+    if (!!isCubicleInsideCubicle) {
+      errorElements.push(insideCubicleElement);
+    } else {
+      newCubicle.push(insideCubicleElement);
+    }
+  });
+
+  // Remove all the cubicles which are outside of the floor
+  floor.map((floorElement) => {
+    newCubicle.map((cubicleElement) => {
+      if (isInside(cubicleElement, floorElement)) {
+        newElementData.push(cubicleElement);
+      } else {
+        errorElements.push(cubicleElement);
+      }
+    });
+  });
+
+  // Remove all the chair which are outside of the cubicle
+  // Remove all the extra chair in cubicle
+  newCubicle.map((cubicleElement) => {
+    let chairCount = 0;
+    chair.map((chairElement) => {
+      if (isInside(chairElement, cubicleElement) && chairCount < 1) {
+        ++chairCount;
+        newElementData.push(chairElement);
+      } else {
+        errorElements.push(chairElement);
+      }
+    });
+  });
+  return { newElementData, errorElements };
+};

@@ -16,6 +16,7 @@ import {
   createElement,
   cursorForPosition,
   getElementAtPosition,
+  removeOverlappingElements,
   resizedCoordinates,
 } from "./helperFunctions";
 
@@ -24,6 +25,7 @@ function App() {
   const [action, setAction] = useState("none");
   const [tool, setTool] = useState("Floor");
   const [selectedElement, setSelectedElement] = useState(null);
+  const [isRefactoringData, setIsRefactoringData] = useState(false);
 
   useLayoutEffect(() => {
     const canvas = document.getElementById("canvas");
@@ -32,7 +34,24 @@ function App() {
 
     const roughCanvas = rough.canvas(canvas);
 
-    elements.forEach(({ roughElement }) => roughCanvas.draw(roughElement));
+    if (
+      elements.length > 0 &&
+      action === "none" &&
+      isRefactoringData === false
+    ) {
+      // Removing Overlapping elements
+      const { newElementData, errorElements } =
+        removeOverlappingElements(elements);
+      setElements(newElementData);
+
+      // Rendering Elements
+      elements.forEach(({ roughElement }) => roughCanvas.draw(roughElement));
+      setIsRefactoringData(true);
+    } else {
+      // Rendering Elements
+      elements.forEach(({ roughElement }) => roughCanvas.draw(roughElement));
+      setIsRefactoringData(false);
+    }
   }, [elements]);
 
   // Updating Element
