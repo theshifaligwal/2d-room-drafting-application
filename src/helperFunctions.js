@@ -1,6 +1,9 @@
 // Rough Js
 import rough from "roughjs/bundled/rough.esm";
 
+// Toastify
+import { toast } from "react-toastify";
+
 // Constants
 import { floorColor, cubicleColor, chairColor } from "./constants";
 
@@ -198,7 +201,7 @@ export const removeOverlappingElements = (elements) => {
   const chair = elements.filter((floor) => floor.type === "Chair");
   let newElementData = floor;
   let newCubicle = [];
-  let errorElements = [];
+  let removedElements = [];
 
   // Remove all the cubicles if they are overlapping
   cubicle.map((insideCubicleElement, index) => {
@@ -213,7 +216,7 @@ export const removeOverlappingElements = (elements) => {
       }
     );
     if (!!isCubicleInsideCubicle) {
-      errorElements.push(insideCubicleElement);
+      removedElements.push(insideCubicleElement);
     } else {
       newCubicle.push(insideCubicleElement);
     }
@@ -225,7 +228,7 @@ export const removeOverlappingElements = (elements) => {
       if (isInside(cubicleElement, floorElement)) {
         newElementData.push(cubicleElement);
       } else {
-        errorElements.push(cubicleElement);
+        removedElements.push(cubicleElement);
       }
     });
   });
@@ -239,9 +242,23 @@ export const removeOverlappingElements = (elements) => {
         ++chairCount;
         newElementData.push(chairElement);
       } else {
-        errorElements.push(chairElement);
+        removedElements.push(chairElement);
       }
     });
   });
-  return { newElementData, errorElements };
+  return { newElementData, removedElements };
 };
+
+export const toastifyErrorMessage = (elementType) =>
+  toast.error(
+    `${elementType} is removed due to its bounder's are in restricted area`,
+    {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+    }
+  );

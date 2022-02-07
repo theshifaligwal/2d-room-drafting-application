@@ -3,6 +3,10 @@ import React, { useLayoutEffect, useState } from "react";
 // Rough Js
 import rough from "roughjs/bundled/rough.esm";
 
+// Toastify
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 // Components
 import ToolBar from "./Components/ToolBar";
 import CanvasScreen from "./Components/CanvasScreen";
@@ -18,6 +22,7 @@ import {
   getElementAtPosition,
   removeOverlappingElements,
   resizedCoordinates,
+  toastifyErrorMessage,
 } from "./helperFunctions";
 
 function App() {
@@ -40,9 +45,12 @@ function App() {
       isRefactoringData === false
     ) {
       // Removing Overlapping elements
-      const { newElementData, errorElements } =
+      let { newElementData, removedElements } =
         removeOverlappingElements(elements);
       setElements(newElementData);
+
+      // // Throw error message for all removed elements
+      // removedElements.map((element) => toastifyErrorMessage(element.type));
 
       // Rendering Elements
       elements.forEach(({ roughElement }) => roughCanvas.draw(roughElement));
@@ -150,6 +158,7 @@ function App() {
         handleMouseMove={handleMouseMove}
         handleMouseUp={handleMouseUp}
       />
+      <ToastContainer />
     </div>
   );
 }
