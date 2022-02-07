@@ -1,45 +1,183 @@
-import { useLayoutEffect, useState } from "react";
+import React, { useLayoutEffect, useState } from "react";
+
+// Rough Js
+import rough from "roughjs/bundled/rough.esm";
+
+// Components
+import ToolBar from "./Components/ToolBar";
+import CanvasScreen from "./Components/CanvasScreen";
 
 // CSS
 import "./App.css";
 
-// Components
-import CanvasScreen from "./Components/CanvasScreen";
-import ToolBar from "./Components/ToolBar";
+// Constants
+import { floorColor, cubicleColor, chairColor } from "./constants";
 
-// Helper Function
-import {
-  checkChairColor,
-  checkCubicleColor,
-  createElement,
-  rgbToHex,
-  generateHexColorCode,
-} from "./helperFunctions";
+const generator = rough.generator();
 
-// Rough JS
-import rough from "roughjs/bundled/rough.esm";
+export const colorDecider = (elementType) => {
+  switch (elementType) {
+    case "Floor":
+      return floorColor;
+    case "Cubicle":
+      return cubicleColor;
+    case "Chair":
+      return chairColor;
 
-const isWithinElement = (x, y, element) => {
-  const { elementType, x1, x2, y1, y2 } = element;
-  if (elementType === "Floor" || elementType === "Cubicle") {
+    default:
+      break;
+  }
+};
+
+function createElement(id, x1, y1, x2, y2, type) {
+  const roughElement =
+    type === "line"
+      ? generator.line(x1, y1, x2, y2)
+      : generator.rectangle(x1, y1, x2 - x1, y2 - y1, {
+          roughness: 0.1,
+          fill: colorDecider(type),
+          fillStyle: "solid", // solid fill
+          strokeLineDash: 0,
+        });
+  return { id, x1, y1, x2, y2, type, roughElement };
+}
+
+const nearPoint = (x, y, x1, y1, name) => {
+  return Math.abs(x - x1) < 5 && Math.abs(y - y1) < 5 ? name : null;
+};
+
+const pointIsOnLine = (lineStart, lineEnd, point, name) => {
+  const offset =
+    distance(lineStart, lineEnd) -
+    (distance(lineStart, point) + distance(lineEnd, point));
+  return Math.abs(offset) < 1 ? name : null;
+};
+
+const point = (x, y) => ({ x, y });
+
+const positionWithinElement = (x, y, element) => {
+  const { type, x1, x2, y1, y2 } = element;
+  if (type === "Floor") {
+    const topLeft = nearPoint(x, y, x1, y1, "tl");
+    const topRight = nearPoint(x, y, x2, y1, "tr");
+    const bottomLeft = nearPoint(x, y, x1, y2, "bl");
+    const bottomRight = nearPoint(x, y, x2, y2, "br");
+
+    const top = pointIsOnLine(point(x1, y1), point(x2, y1), point(x, y), "t");
+    const right = pointIsOnLine(point(x2, y1), point(x2, y2), point(x, y), "r");
+    const bottom = pointIsOnLine(
+      point(x1, y2),
+      point(x2, y2),
+      point(x, y),
+      "b"
+    );
+    const left = pointIsOnLine(point(x1, y1), point(x1, y2), point(x, y), "l");
+
+    const inside = x >= x1 && x <= x2 && y >= y1 && y <= y2 ? "inside" : null;
+    return (
+      topLeft ||
+      topRight ||
+      bottomLeft ||
+      bottomRight ||
+      top ||
+      right ||
+      bottom ||
+      left ||
+      inside
+    );
+  } else {
+    const start = nearPoint(x, y, x1, y1, "start");
+    const end = nearPoint(x, y, x2, y2, "end");
+    const inside = pointIsOnLine(
+      point(x1, y1),
+      point(x2, y2),
+      point(x, y),
+      "inside"
+    );
+    return start || end || inside;
+  }
+};
+
+const distance = (a, b) =>
+  Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+
+const getElementAtPosition = (x, y, elements) => {
+  return elements
+    .map((element) => ({
+      ...element,
+      position: positionWithinElement(x, y, element),
+    }))
+    .find((element) => element.position !== null);
+};
+
+const adjustElementCoordinates = (element) => {
+  const { type, x1, y1, x2, y2 } = element;
+  if (type === "Floor") {
     const minX = Math.min(x1, x2);
     const maxX = Math.max(x1, x2);
     const minY = Math.min(y1, y2);
     const maxY = Math.max(y1, y2);
-    return x >= minX && x <= maxX && y >= minY && y <= maxY;
+    return { x1: minX, y1: minY, x2: maxX, y2: maxY };
   } else {
-    //
+    if (x1 < x2 || (x1 === x2 && y1 < y2)) {
+      return { x1, y1, x2, y2 };
+    } else {
+      return { x1: x2, y1: y2, x2: x1, y2: y1 };
+    }
   }
 };
 
-const getElementAtPosition = (x, y, elements) => {
-  return elements.find((element) => isWithinElement(x, y, element));
+const cursorForPosition = (position) => {
+  switch (position) {
+    case "tl":
+    case "br":
+    case "start":
+    case "end":
+      return "nwse-resize";
+    case "tr":
+    case "bl":
+      return "nesw-resize";
+    case "t":
+    case "b":
+      return "ns-resize";
+    case "r":
+    case "l":
+      return "ew-resize";
+    default:
+      return "move";
+  }
+};
+
+const resizedCoordinates = (clientX, clientY, position, coordinates) => {
+  const { x1, y1, x2, y2 } = coordinates;
+  switch (position) {
+    case "tl":
+    case "start":
+      return { x1: clientX, y1: clientY, x2, y2 };
+    case "tr":
+      return { x1, y1: clientY, x2: clientX, y2 };
+    case "bl":
+      return { x1: clientX, y1, x2, y2: clientY };
+    case "br":
+    case "end":
+      return { x1, y1, x2: clientX, y2: clientY };
+    case "t":
+      return { x1, y1: clientY, x2, y2 };
+    case "r":
+      return { x1, y1, x2: clientX, y2 };
+    case "b":
+      return { x1, y1, x2, y2: clientY };
+    case "l":
+      return { x1: clientX, y1, x2, y2 };
+    default:
+      return null; //should not really get here...
+  }
 };
 
 function App() {
   const [elements, setElements] = useState([]);
   const [action, setAction] = useState("none");
-  const [tool, setTool] = useState("Floor");
+  const [tool, setTool] = useState("line");
   const [selectedElement, setSelectedElement] = useState(null);
 
   useLayoutEffect(() => {
@@ -48,54 +186,35 @@ function App() {
     context.clearRect(0, 0, canvas.width, canvas.height);
 
     const roughCanvas = rough.canvas(canvas);
-    if (!action)
-      elements.forEach(({ roughElement }) => roughCanvas.draw(roughElement));
-    else {
-      if (elements.length > 1) {
-        for (let index = 0; index < elements.length - 1; index++) {
-          roughCanvas.draw(elements[index].roughElement);
-        }
-      }
-      if (elements.length > 0) {
-        const index = elements.length - 1;
-        const { x1, y1, x2, y2 } = elements[index];
-        const hexCodeColor = generateHexColorCode(
-          context.getImageData(x2, y2, 1, 1).data
-        );
-        // Check For Cubicle
-        if (tool === "Cubicle" && !checkCubicleColor(hexCodeColor)) {
-          let copyElement = [...elements];
-          copyElement.pop();
-          setElements(copyElement);
-          setAction("none");
-          alert(`You can not make ${tool}`);
-        }
-        // Check For Chairs
-        if (tool === "Chair" && !checkChairColor(hexCodeColor)) {
-          let copyElement = [...elements];
-          copyElement.pop();
-          setElements(copyElement);
-          setAction("none");
-          alert(`You can not make ${tool}`);
-        }
-        roughCanvas.draw(elements[index].roughElement);
-      }
-    }
+
+    elements.forEach(({ roughElement }) => roughCanvas.draw(roughElement));
   }, [elements]);
+
+  const updateElement = (id, x1, y1, x2, y2, type) => {
+    const updatedElement = createElement(id, x1, y1, x2, y2, type);
+
+    const elementsCopy = [...elements];
+    elementsCopy[id] = updatedElement;
+    setElements(elementsCopy);
+  };
 
   const handleMouseDown = (event) => {
     const { clientX, clientY } = event;
     if (tool === "Selection") {
-      // If we are moving the select actions to moving
       const element = getElementAtPosition(clientX, clientY, elements);
-      if (!!element) {
+      if (element) {
         const offsetX = clientX - element.x1;
         const offsetY = clientY - element.y1;
         setSelectedElement({ ...element, offsetX, offsetY });
-        setAction("moving");
+
+        if (element.position === "inside") {
+          setAction("moving");
+        } else {
+          setAction("resizing");
+        }
       }
     } else {
-      const id = !!elements ? elements.length : 0;
+      const id = elements.length;
       const element = createElement(
         id,
         clientX,
@@ -105,28 +224,19 @@ function App() {
         tool
       );
       setElements((prevState) => [...prevState, element]);
+      setSelectedElement(element);
+
       setAction("drawing");
     }
-  };
-
-  const updateElement = (id, x1, y1, x2, y2, elementType) => {
-    const updatedElement = createElement(id, x1, y1, x2, y2, elementType);
-
-    const elementCopy = [...elements];
-    elementCopy[id] = updatedElement;
-    setElements(elementCopy);
   };
 
   const handleMouseMove = (event) => {
     const { clientX, clientY } = event;
 
     if (tool === "Selection") {
-      event.target.style.cursor = getElementAtPosition(
-        clientX,
-        clientY,
-        elements
-      )
-        ? "move"
+      const element = getElementAtPosition(clientX, clientY, elements);
+      event.target.style.cursor = element
+        ? cursorForPosition(element.position)
         : "default";
     }
 
@@ -135,24 +245,33 @@ function App() {
       const { x1, y1 } = elements[index];
       updateElement(index, x1, y1, clientX, clientY, tool);
     } else if (action === "moving") {
-      const { id, x1, y1, x2, y2, elementType, offsetX, offsetY } =
-        selectedElement;
+      const { id, x1, x2, y1, y2, type, offsetX, offsetY } = selectedElement;
       const width = x2 - x1;
       const height = y2 - y1;
       const newX1 = clientX - offsetX;
       const newY1 = clientY - offsetY;
-      updateElement(
-        id,
-        newX1,
-        newY1,
-        newX1 + width,
-        newY1 + height,
-        elementType
+      updateElement(id, newX1, newY1, newX1 + width, newY1 + height, type);
+    } else if (action === "resizing") {
+      const { id, type, position, ...coordinates } = selectedElement;
+      const { x1, y1, x2, y2 } = resizedCoordinates(
+        clientX,
+        clientY,
+        position,
+        coordinates
       );
+      updateElement(id, x1, y1, x2, y2, type);
     }
   };
 
   const handleMouseUp = () => {
+    if (selectedElement) {
+      const index = selectedElement.id;
+      const { id, type } = elements[index];
+      if (action === "drawing" || action === "resizing") {
+        const { x1, y1, x2, y2 } = adjustElementCoordinates(elements[index]);
+        updateElement(id, x1, y1, x2, y2, type);
+      }
+    }
     setAction("none");
     setSelectedElement(null);
   };
