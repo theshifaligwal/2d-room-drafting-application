@@ -30,7 +30,7 @@ export const distance = (a, b) =>
 // Calculate Diameter of Circle
 export const diameter = (x1, y1, x2, y2) =>
   distance(point(x1, y1), point(x2, y2)) * 2;
-  
+
 // Create the rough element
 export const createElement = (id, x1, y1, x2, y2, type) => {
   const elementStyle = {
@@ -62,7 +62,7 @@ export const pointIsOnLine = (lineStart, lineEnd, point, name) => {
 // Find position within the element
 export const positionWithinElement = (x, y, element) => {
   const { type, x1, x2, y1, y2 } = element;
-  if (type === "Floor") {
+  if (type === "Floor" || type === "Cubicle") {
     const topLeft = nearPoint(x, y, x1, y1, "tl");
     const topRight = nearPoint(x, y, x2, y1, "tr");
     const bottomLeft = nearPoint(x, y, x1, y2, "bl");
@@ -116,7 +116,7 @@ export const getElementAtPosition = (x, y, elements) => {
 // Adjust the coordinates of the element
 export const adjustElementCoordinates = (element) => {
   const { type, x1, y1, x2, y2 } = element;
-  if (type === "Floor") {
+  if (type === "Floor" || type === "Cubicle") {
     const minX = Math.min(x1, x2);
     const maxX = Math.max(x1, x2);
     const minY = Math.min(y1, y2);
