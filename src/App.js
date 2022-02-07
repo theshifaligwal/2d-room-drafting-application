@@ -41,17 +41,6 @@ function App() {
 
     const roughCanvas = rough.canvas(canvas);
 
-    // Create Text on Canvas
-    // elements
-    //   .filter((item) => item.type === "Text")
-    //   .map((textElement) => {
-    //     const { id, textInputName, x1, y1 } = textElement;
-    //     const roughElement = context.fillText(textInputName, x1, y1);
-    //     const elementsCopy = [...elements];
-    //     elementsCopy[id] = { ...textElement, roughElement };
-    //     setElements(elementsCopy);
-    //   });
-
     if (
       elements.length > 0 &&
       action === "none" &&
