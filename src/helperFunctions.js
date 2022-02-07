@@ -20,17 +20,29 @@ export const colorDecider = (elementType) => {
   }
 };
 
+// Return point in object
+export const point = (x, y) => ({ x, y });
+
+// Find the Distance
+export const distance = (a, b) =>
+  Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+
+// Calculate Diameter of Circle
+export const diameter = (x1, y1, x2, y2) =>
+  distance(point(x1, y1), point(x2, y2)) * 2;
+  
 // Create the rough element
 export const createElement = (id, x1, y1, x2, y2, type) => {
+  const elementStyle = {
+    roughness: 0,
+    fill: colorDecider(type),
+    fillStyle: "solid", // solid fill
+    strokeLineDash: 0,
+  };
   const roughElement =
-    type === "line"
-      ? generator.line(x1, y1, x2, y2)
-      : generator.rectangle(x1, y1, x2 - x1, y2 - y1, {
-          roughness: 0.1,
-          fill: colorDecider(type),
-          fillStyle: "solid", // solid fill
-          strokeLineDash: 0,
-        });
+    type === "Chair"
+      ? generator.circle(x1, y1, diameter(x1, y1, x2, y2), elementStyle)
+      : generator.rectangle(x1, y1, x2 - x1, y2 - y1, elementStyle);
   return { id, x1, y1, x2, y2, type, roughElement };
 };
 
@@ -46,9 +58,6 @@ export const pointIsOnLine = (lineStart, lineEnd, point, name) => {
     (distance(lineStart, point) + distance(lineEnd, point));
   return Math.abs(offset) < 1 ? name : null;
 };
-
-// returns the point in object
-export const point = (x, y) => ({ x, y });
 
 // Find position within the element
 export const positionWithinElement = (x, y, element) => {
@@ -93,10 +102,6 @@ export const positionWithinElement = (x, y, element) => {
     return start || end || inside;
   }
 };
-
-// FInd the Distance
-export const distance = (a, b) =>
-  Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
 
 // Find the current element that is at the position
 export const getElementAtPosition = (x, y, elements) => {
